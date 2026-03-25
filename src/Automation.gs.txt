@@ -1,0 +1,39 @@
+function fillDumpSummary() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const summarySheet = ss.getSheetByName('Summary'); 
+  const dataSheet = ss.getSheetByName('Pivot');
+
+  if (!summarySheet || !dataSheet) return;
+
+  const dumpData = dataSheet.getDataRange().getValues();
+  const storeNames = summarySheet.getRange(2, 2, 1, summarySheet.getLastColumn() - 1).getValues()[0];
+  const cleanedSKUs = summarySheet.getRange(3, 1, summarySheet.getLastRow() - 2, 1).getValues().flat();
+
+  const cleanedSKUCol = dumpData[0].indexOf('cleaned sku'); 
+  const originRowIndex = dumpData.map(row => row[0]).indexOf('origin');
+  
+  if (cleanedSKUCol === -1 || originRowIndex === -1) return;
+
+  const storeHeaderRow = dumpData[originRowIndex]; 
+  const skuStartRow = originRowIndex + 1; 
+  const resultsGrid = [];
+
+  for (let i = 0; i < cleanedSKUs.length; i++) {
+    const sku = cleanedSKUs[i];
+    const rowValues = [];
+
+    for (let j = 0; j < storeNames.length; j++) {
+      const store = storeNames[j];
+      const skuRowInDump = dumpData.findIndex((row, idx) => row[cleanedSKUCol] === sku && idx >= skuStartRow);
+      const storeColInDump = storeHeaderRow.indexOf(store);
+
+      let val = (skuRowInDump > -1 && storeColInDump > -1) ? dumpData[skuRowInDump][storeColInDump] : "";
+      rowValues.push(val);
+    }
+    resultsGrid.push(rowValues);
+  }
+
+  if (resultsGrid.length > 0) {
+    summarySheet.getRange(3, 2, resultsGrid.length, resultsGrid[0].length).setValues(resultsGrid);
+  }
+}
